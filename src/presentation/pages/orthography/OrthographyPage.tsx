@@ -1,15 +1,22 @@
 import { useState } from "react";
 import {
   GptMessage,
+  GptOrthographyMessage,
   MyMessage,
   TextMessageBox,
-  // TextMessageBoxSelect,
   TypingLoader,
 } from "../../components";
+import { orthographyUseCase } from "../../../core/use-cases";
 
 interface Message {
   text: string;
   isGpt: boolean;
+  info?: {
+    userScore: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    errors: any;
+    message: string;
+  };
 }
 
 export const OrthographyPage = () => {
@@ -20,11 +27,27 @@ export const OrthographyPage = () => {
     setIsLoading(true);
     setMessages((prev) => [...prev, { text: text, isGpt: false }]);
 
-    //TODO: UseCase
-
-    setIsLoading(false);
+    const { ok, errors, message, userScore } = await orthographyUseCase(text);
+    
+    if (!ok) {
+      setMessages((prev) => [
+        ...prev,
+        { text: "No se pudo realizar la corrección", isGpt: true },
+      ]);
+    } else {
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: message,
+          isGpt: true,
+          info: { errors, message, userScore },
+        },
+      ]);
+    }
 
     // Todo: Añadir el mensaje de isGPT en true
+
+    setIsLoading(false);
   };
 
   return (
@@ -36,7 +59,7 @@ export const OrthographyPage = () => {
 
           {messages.map((message, index) =>
             message.isGpt ? (
-              <GptMessage key={index} text="Esto es de OpenAI" />
+              <GptOrthographyMessage key={index} {...message.info!} />
             ) : (
               <MyMessage key={index} text={message.text} />
             )
@@ -50,17 +73,6 @@ export const OrthographyPage = () => {
         </div>
       </div>
 
-      {/* <TextMessageBoxFile
-        onSendMessage={handlePost}
-        placeholder="Escribe aquí lo que deseas"
-        disableCorrections
-      /> */}
-      {/* <TextMessageBoxSelect
-        options={[{id: '1', text: 'Hola'}]}
-        onSendMessage={handlePost}
-        placeholder="Escribe aquí lo que deseas"
-        disableCorrections
-      /> */}
       <TextMessageBox
         onSendMessage={handlePost}
         placeholder="Escribe aquí lo que deseas"
